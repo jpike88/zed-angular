@@ -122,32 +122,29 @@ impl AngularExtension {
         env::current_dir().map_err(|e| format!("Failed to get current directory: {}", e))
     }
 
-    fn get_ng_probe_locations(worktree: Option<&zed::Worktree>) -> Vec<String> {
+    fn get_ng_probe_locations(worktree: &zed::Worktree) -> Vec<String> {
         let mut paths = vec![];
 
-        if let Ok(path) = Self::get_current_dir() {
-            paths.push(path.to_string_lossy().to_string());
-        }
+        // 1. Probe the open project's root folder (where the user's local node_modules lives)
+        paths.push(worktree.root_path());
 
-        if let Some(worktree) = worktree {
-            paths.push(worktree.root_path());
+        // 2. Probe the project's sub node_modules directory explicitly
+        let project_node_modules = PathBuf::from(worktree.root_path()).join("node_modules");
+        paths.push(project_node_modules.to_string_lossy().to_string());
+
+        // 3. Probe the Zed extension's own node_modules directory as a fallback
+        if let Ok(current_dir) = Self::get_current_dir() {
+            let ext_node_modules = current_dir.join("node_modules");
+            paths.push(ext_node_modules.to_string_lossy().to_string());
+            paths.push(current_dir.to_string_lossy().to_string());
         }
 
         paths
     }
 
-    fn get_ts_probe_locations(worktree: Option<&zed::Worktree>) -> Vec<String> {
-        let mut paths = vec![];
-
-        if let Ok(path) = Self::get_current_dir() {
-            paths.push(path.to_string_lossy().to_string());
-        }
-
-        if let Some(worktree) = worktree {
-            paths.push(worktree.root_path());
-        }
-
-        paths
+    fn get_ts_probe_locations(worktree: &zed::Worktree) -> Vec<String> {
+        // Use the exact same resolution rules for TypeScript probing
+        Self::get_ng_probe_locations(worktree)
     }
 }
 
@@ -176,20 +173,23 @@ impl zed::Extension for AngularExtension {
         }
 
         let server_path = self.server_script_path(language_server_id)?;
-        let current_dir = env::current_dir().unwrap_or(PathBuf::new());
+        let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::new());
         let full_path_to_server = current_dir.join(&server_path);
 
         let mut args = vec![full_path_to_server.to_string_lossy().to_string()];
         args.push("--stdio".to_string());
 
+        // Probe paths: This tells the language-server where to seek and resolve "typescript/lib/tsserverlibrary"
         args.push("--tsProbeLocations".to_string());
-        args.extend(Self::get_ts_probe_locations(Some(worktree)));
+        args.push(Self::get_ts_probe_locations(worktree).join(","));
 
         args.push("--ngProbeLocations".to_string());
-        args.extend(Self::get_ng_probe_locations(Some(worktree)));
+        args.push(Self::get_ng_probe_locations(worktree).join(","));
 
+        // Provide the fallback SDK path inside the extension environment
+        let absolute_tsdk_path = current_dir.join(TYPESCRIPT_TSDK_PATH);
         args.push("--tsdk".to_string());
-        args.push(TYPESCRIPT_TSDK_PATH.to_string());
+        args.push(absolute_tsdk_path.to_string_lossy().to_string());
 
         Ok(zed::Command {
             command: zed::node_binary_path()?,
