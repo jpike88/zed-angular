@@ -14,24 +14,11 @@ This extension integrates the Angular Language Service into Zed. It uses the sam
 
 ## Version Management
 
-The extension depends on `@angular/language-service` and `typescript` Node packages. By default, these versions are managed internally, but they can be customized using the following settings:
+The extension depends on `@angular/language-service` and `typescript` Node packages. It will use whatever versions of each that are available locally in your project.
 
-```json
-{
-  "lsp": {
-    "angular": {
-      "initialization_options": {
-        "angular_language_server_version": "17.3.0",
-        "typescript_version": "5.3.2"
-      }
-    }
-  }
-}
-```
+Please ensure your project's Angular and TypeScript versions are compatible to avoid issues.
 
-Please ensure the versions of Angular and TypeScript are compatible to avoid issues.
-
-Refer to [Angular Version Compatibility](https://angular.dev/reference/versions#unsupported-angular-versions) for details. Mismatched versions may lead to bugs, so it is not recommended to use `latest` as a version, but it's also a valid option.
+Refer to [Angular Version Compatibility](https://angular.dev/reference/versions#unsupported-angular-versions) for details.
 
 ## Installation Instructions
 
