@@ -12,6 +12,14 @@ const TYPESCRIPT_TSDK_PATH: &str = "node_modules/typescript/lib";
 const ANGULAR_LANGUAGE_SERVER_PACKAGE_NAME: &str = "@angular/language-server";
 const TYPESCRIPT_PACKAGE_NAME: &str = "typescript";
 
+#[derive(Deserialize, Default)]
+struct UserSettings {
+    /// Maximum heap size (in MB) for the language server process, passed to
+    /// node as `--max-old-space-size`. Useful in large monorepos where the
+    /// server exceeds node's default (~4 GB) heap limit and crashes.
+    max_ts_server_memory: Option<u32>,
+}
+
 struct AngularExtension {
     did_find_server: bool,
 }
@@ -93,11 +101,25 @@ impl zed::Extension for AngularExtension {
         language_server_id: &zed::LanguageServerId,
         worktree: &zed::Worktree,
     ) -> Result<zed::Command> {
+        let user_settings: UserSettings =
+            LspSettings::for_worktree(&language_server_id.to_string(), worktree)?
+            .initialization_options
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|e| format!("Failed to parse initialization_options: {}", e))?
+            .unwrap_or_default();
+
         let server_path = self.server_script_path(language_server_id)?;
         let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::new());
         let full_path_to_server = current_dir.join(&server_path);
 
-        let mut args = vec![full_path_to_server.to_string_lossy().to_string()];
+        let mut args = vec![];
+
+        if let Some(max_memory) = user_settings.max_ts_server_memory {
+            args.push(format!("--max-old-space-size={}", max_memory));
+        }
+
+        args.push(full_path_to_server.to_string_lossy().to_string());
         args.push("--stdio".to_string());
 
         // Probe paths: This tells the language-server where to seek and resolve "typescript/lib/tsserverlibrary"
