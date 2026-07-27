@@ -20,6 +20,22 @@ Please ensure your project's Angular and TypeScript versions are compatible to a
 
 Refer to [Angular Version Compatibility](https://angular.dev/reference/versions#unsupported-angular-versions) for details.
 
+## Memory
+
+In large workspaces (e.g. monorepos), the language server can exceed node's default heap limit (~4 GB) and crash repeatedly. If the server keeps restarting or stops responding after a few minutes, raise the limit with `max_ts_server_memory` (in MB, passed to node as `--max-old-space-size`):
+
+```json
+{
+  "lsp": {
+    "angular": {
+      "initialization_options": {
+        "max_ts_server_memory": 8192
+      }
+    }
+  }
+}
+```
+
 ## Installation Instructions
 
 To install this extension locally:
