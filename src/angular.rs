@@ -103,11 +103,11 @@ impl zed::Extension for AngularExtension {
     ) -> Result<zed::Command> {
         let user_settings: UserSettings =
             LspSettings::for_worktree(&language_server_id.to_string(), worktree)?
-            .initialization_options
-            .map(serde_json::from_value)
-            .transpose()
-            .map_err(|e| format!("Failed to parse initialization_options: {}", e))?
-            .unwrap_or_default();
+                .initialization_options
+                .map(serde_json::from_value)
+                .transpose()
+                .map_err(|e| format!("Failed to parse initialization_options: {}", e))?
+                .unwrap_or_default();
 
         let server_path = self.server_script_path(language_server_id)?;
         let current_dir = env::current_dir().unwrap_or_else(|_| PathBuf::new());
