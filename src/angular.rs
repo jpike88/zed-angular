@@ -24,19 +24,30 @@ impl AngularExtension {
     /// Trim whitespace, a trailing `/index.js`, and trailing slashes so the
     /// value always denotes the package *directory*.
     fn normalize(path: &str) -> String {
-        let p = path.trim();
-        let p = p.strip_suffix("/index.js").unwrap_or(p);
+        let p = path.trim().replace('\\', "/");
+        let p = p.strip_suffix("/index.js").unwrap_or(&p);
         p.trim_end_matches('/').to_string()
     }
 
     fn expand_home(worktree: &zed::Worktree, path: &str) -> String {
-        match path.strip_prefix("~/") {
-            Some(rest) => worktree
-                .shell_env()
-                .into_iter()
-                .find(|(k, _)| k == "HOME")
-                .map(|(_, home)| format!("{}/{rest}", home.trim_end_matches('/')))
-                .unwrap_or_else(|| path.to_string()),
+        let rest = path.strip_prefix("~/").or_else(|| path.strip_prefix("~\\"));
+
+        match rest {
+            Some(rest) => {
+                let env = worktree.shell_env();
+                let home = env
+                    .iter()
+                    .find(|(k, _)| k == "HOME" || k == "USERPROFILE")
+                    .map(|(_, v)| v.as_str());
+
+                match home {
+                    Some(home) => {
+                        let home = home.trim_end_matches(['/', '\\']);
+                        format!("{home}/{rest}")
+                    }
+                    None => path.to_string(),
+                }
+            }
             None => path.to_string(),
         }
     }
@@ -58,7 +69,10 @@ impl AngularExtension {
             .filter(|p| !p.is_empty())
             .unwrap_or_else(|| DEFAULT_SERVER_DIR.to_string());
 
-        if requested.starts_with('/') {
+        let is_drive_abs = requested.len() > 2
+            && requested.as_bytes()[1] == b':'
+            && requested.as_bytes()[2] == b'/';
+        if requested.starts_with('/') || is_drive_abs {
             requested
         } else {
             format!("{root}/{requested}")

@@ -124,13 +124,3 @@ To install this extension locally:
 ```
 
 If the published version of the extension is already installed, Zed uninstalls it before installing the dev extension. After changing the source, run `zed: rebuild dev extension` from the command palette — the extension is compiled to WebAssembly at install/rebuild time, so edits are not picked up until you do.
-
-## Troubleshooting
-
-- **Errors mentioning a path or setting you no longer use.** You are probably still running the published extension rather than your dev build. Confirm which version is loaded in `zed: open log`, and remove stale `lsp.angular` entries from both your user `settings.json` and any `.zed/settings.json` in the project.
-- **Server fails to start.** Open `debug: open language server logs` and check the spawned command and Node's output. The extension passes `--logToConsole --logVerbosity normal`, so resolution failures appear there.
-- **TypeScript resolution errors.** Check your installed TypeScript version with `npx tsc --version` — anything above 6.0.3 is outside the supported range.
-- **Server restarts every few minutes.** Raise `max_ts_server_memory`; see [Memory](#memory).
-- **Nothing happens in templates.** Verify step 5 above — the `angular` server has to be added to the `TypeScript` and `HTML` language server lists explicitly.
-- **Settings appear to be ignored.** A project-local `.zed/settings.json` overrides your user settings. Check both, then run `editor: restart language server`.
-- **After changing dependencies.** Run `editor: restart language server` so the new server version is picked up.
